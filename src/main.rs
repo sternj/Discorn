@@ -25,7 +25,7 @@ impl DiscornHandler {
         let lines = BufReader::new(f).lines();
         let words: Vec<String> = lines.filter_map(Result::ok).collect();
         let initial_str = get_random_word(&words);
-        println!("Initial word is {}", &initial_str);
+        
         return DiscornHandler {
             words: words,
             curr_word: Mutex::new(initial_str),
@@ -37,10 +37,8 @@ impl EventHandler for DiscornHandler {
     fn message(&self, ctx: Context, msg: Message) {
         let mut match_string = self.curr_word.lock().unwrap();
         let m = match_string.to_string().to_lowercase();
-        println!("Received message: {}", msg.content);
-        println!("Match string {}", m);
         if msg.content.contains(&m.to_lowercase()) {
-            println!("Entering");
+            
             if let Err(why) = msg.channel_id.say(
                 &ctx.http,
                 format!(
@@ -50,7 +48,7 @@ impl EventHandler for DiscornHandler {
             ) {
                 println!("Error sending message: {}", why)
             }
-            println!("Exited");
+            
             let new_str = get_random_word(&self.words);
             *match_string = new_str;
         }
@@ -61,7 +59,6 @@ fn main() {
     let handler = DiscornHandler::new(PathBuf::from("./words.txt"));
     let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("Token"), handler)
         .expect("Could not initialize client");
-    println!("Hello, world!");
     if let Err(why) = client.start() {
         println!("Client error: {}", why)
     }
