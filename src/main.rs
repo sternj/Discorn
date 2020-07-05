@@ -38,7 +38,6 @@ impl EventHandler for DiscornHandler {
         let mut match_string = self.curr_word.lock().unwrap();
         let m = match_string.to_string().to_lowercase();
         if msg.content.contains(&m.to_lowercase()) {
-            
             if let Err(why) = msg.channel_id.say(
                 &ctx.http,
                 format!(
@@ -48,7 +47,6 @@ impl EventHandler for DiscornHandler {
             ) {
                 println!("Error sending message: {}", why)
             }
-            
             let new_str = get_random_word(&self.words);
             *match_string = new_str;
         }
