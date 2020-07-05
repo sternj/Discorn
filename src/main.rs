@@ -37,10 +37,7 @@ impl EventHandler for DiscornHandler {
     fn message(&self, ctx: Context, msg: Message) {
         let mut match_string = self.curr_word.lock().unwrap();
         let m = match_string.to_string().to_lowercase();
-        println!("Received message: {}", msg.content);
-        println!("Match string {}", m);
         if msg.content.contains(&m.to_lowercase()) {
-            println!("Entering");
             if let Err(why) = msg.channel_id.say(
                 &ctx.http,
                 format!(
