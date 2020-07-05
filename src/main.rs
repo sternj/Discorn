@@ -25,7 +25,7 @@ impl DiscornHandler {
         let lines = BufReader::new(f).lines();
         let words: Vec<String> = lines.filter_map(Result::ok).collect();
         let initial_str = get_random_word(&words);
-        
+        println!("the first corn word is {}", initial_str);
         return DiscornHandler {
             words: words,
             curr_word: Mutex::new(initial_str),
