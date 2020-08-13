@@ -52,7 +52,7 @@ impl DiscornHandler {
 impl EventHandler for DiscornHandler {
     fn message(&self, ctx: Context, msg: Message) {
         let mut words = self.curr_word.lock().unwrap();
-        println!("words: {:?}", words);
+        
         if msg
             .content
             .to_lowercase()
@@ -70,13 +70,13 @@ impl EventHandler for DiscornHandler {
             let new_str = get_random_word(&self.light_words);
             words.light_word = new_str;
         }
-        if msg
+        else if msg
             .content
             .to_lowercase()
             .contains(&words.dark_word.to_lowercase())
         {
-            let rnd: f32 = thread_rng().gen_range(0f32, 1f32);
-            if rnd < 0.75f32 {
+            //let rnd: f32 = thread_rng().gen_range(0f32, 1f32);
+            //if rnd < 0.75f32 {
                 if let Err(why) = msg.channel_id.say(
                     &ctx.http,
                     format!(
@@ -88,15 +88,17 @@ impl EventHandler for DiscornHandler {
                 }
                 let new_str = get_random_word(&self.dark_words);
                 words.dark_word = new_str;
-            }
+            //}
         }
+
+        
     }
 }
 
 fn main() {
     let handler = DiscornHandler::new(
         PathBuf::from("./light-corn-words.txt"),
-        PathBuf::from("./dark-corn.words.txt"),
+        PathBuf::from("./dark-corn-words.txt"),
     );
     let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("Token"), handler)
         .expect("Could not initialize client");
