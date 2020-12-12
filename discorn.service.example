@@ -1,0 +1,16 @@
+[Unit]
+Description=Discorn
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+Environment=DISCORD_TOKEN=[env-key]
+ExecStart=/path/to/discorn/executable
+WorkingDirectory=/path/to/folder/with/words
+
+[Install]
+WantedBy=multi-user.target
