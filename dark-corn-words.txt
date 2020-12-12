@@ -12,8 +12,6 @@ cat
 dog
 vc
 tumblr
-goblin
-gremlin
 haha
 carpet
 fair

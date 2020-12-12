@@ -51,8 +51,11 @@ impl DiscornHandler {
 
 impl EventHandler for DiscornHandler {
     fn message(&self, ctx: Context, msg: Message) {
+        if msg.author.id == ctx.cache.read().user.id {
+            return;
+        }
         let mut words = self.curr_word.lock().unwrap();
-        
+        let rnd: f32 = thread_rng().gen_range(0f32, 1f32);
         if msg
             .content
             .to_lowercase()
@@ -67,6 +70,14 @@ impl EventHandler for DiscornHandler {
             ) {
                 println!("Error sending message: {}", why)
             }
+            if rnd < 0.25 {
+                if let Err(why) = msg.channel_id.say(
+                    &ctx.http,
+                    "Checkmate atheists"
+                ) {
+                    println!("Error sending message: {}", why);
+                }
+            } 
             let new_str = get_random_word(&self.light_words);
             words.light_word = new_str;
         }
@@ -86,6 +97,15 @@ impl EventHandler for DiscornHandler {
                 ) {
                     println!("Error sending message: {}", why)
                 }
+                
+                if rnd < 0.25 {
+                    if let Err(why) = msg.channel_id.say(
+                        &ctx.http,
+                        "Checkmate atheists"
+                    ) {
+                        println!("Error sending message: {}", why);
+                    }
+                } 
                 let new_str = get_random_word(&self.dark_words);
                 words.dark_word = new_str;
             //}
