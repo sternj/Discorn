@@ -1,23 +1,33 @@
 use rand::{thread_rng, Rng};
 use serenity::client::{Client, Context};
 use serenity::model::channel::Message;
+use serenity::model::guild::Guild;
+use serenity::model::id::GuildId;
 use serenity::prelude::EventHandler;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::collections::HashMap;
+use std::cell::Cell;
 use std::path::PathBuf;
-use std::sync::Mutex;
-
+use serenity::prelude::Mutex;
+use std::sync::RwLock;
 #[derive(Debug)]
 struct Word {
     light_word: String,
     dark_word: String,
 }
 
-struct DiscornHandler {
-    light_words: Vec<String>,
+struct DiscornGuild {
     dark_words: Vec<String>,
-    curr_word: Mutex<Word>,
+    light_word: String,
+    dark_word: String
+}
+
+struct DiscornHandler {
+    default_dark_words: Vec<String>,
+    light_words: Vec<String>,
+    guilds: RwLock<HashMap<GuildId, Mutex<DiscornGuild>>>
 }
 
 fn get_random_word(words: &Vec<String>) -> String {
@@ -43,29 +53,62 @@ impl DiscornHandler {
         println!("{:?}", word_struct);
         return DiscornHandler {
             light_words: words,
-            dark_words: dark_words,
-            curr_word: Mutex::new(word_struct),
+            default_dark_words: dark_words,
+            guilds: RwLock::new(HashMap::new())
         };
+    }
+
+    fn add_guild(&self, guild_id: GuildId) {
+        let mut hm = self.guilds.write().unwrap();
+        let dark_words = self.default_dark_words.clone();
+        hm.insert(guild_id, Mutex::new(DiscornGuild {
+            light_word: get_random_word(&self.light_words),
+            dark_word: get_random_word(&dark_words),
+            dark_words: dark_words,
+        }));
     }
 }
 
 impl EventHandler for DiscornHandler {
+    fn cache_ready(&self, _ctx: Context, guilds: Vec<GuildId>) {
+        for guild_id in guilds {
+            self.add_guild(guild_id);
+        }
+    }
+    fn guild_create(&self, _ctx: Context, guild: Guild, _is_new: bool) {
+        self.add_guild(guild.id);
+    }
     fn message(&self, ctx: Context, msg: Message) {
         if msg.author.id == ctx.cache.read().user.id {
             return;
         }
-        let mut words = self.curr_word.lock().unwrap();
+        let guild_id = match msg.guild_id {
+            Some(e) => e,
+            None => {
+                report_error(&msg, &ctx, "Message must be sent in gateway");
+                return;
+            }
+        };
+        let guild_rw = match self.guilds.read() {
+            Ok(o) => o,
+            Err(e) => {
+                report_error(&msg, &ctx, e);
+                return;
+            },
+        };
+        let guild = guild_rw.get(&guild_id).unwrap();
+        let mut guild_mx = guild.lock();
         let rnd: f32 = thread_rng().gen_range(0f32, 1f32);
         if msg
             .content
             .to_lowercase()
-            .contains(&words.light_word.to_lowercase())
+            .contains(&guild_mx.light_word.to_lowercase())
         {
             if let Err(why) = msg.channel_id.say(
                 &ctx.http,
                 format!(
                     ":corn::corn::corn: YOU SAID THE CORN WORD! {} :corn::corn::corn:",
-                    &words.light_word
+                    &guild_mx.light_word
                 ),
             ) {
                 println!("Error sending message: {}", why)
@@ -79,12 +122,12 @@ impl EventHandler for DiscornHandler {
                 }
             } 
             let new_str = get_random_word(&self.light_words);
-            words.light_word = new_str;
+            guild_mx.light_word = new_str;
         }
         else if msg
             .content
             .to_lowercase()
-            .contains(&words.dark_word.to_lowercase())
+            .contains(&guild_mx.dark_word.to_lowercase())
         {
             //let rnd: f32 = thread_rng().gen_range(0f32, 1f32);
             //if rnd < 0.75f32 {
@@ -92,7 +135,7 @@ impl EventHandler for DiscornHandler {
                     &ctx.http,
                     format!(
                         ":corn::corn::corn: YOU SAID THE CORN WORD! {} :corn::corn::corn:",
-                        &words.dark_word
+                        &guild_mx.dark_word
                     ),
                 ) {
                     println!("Error sending message: {}", why)
@@ -106,12 +149,21 @@ impl EventHandler for DiscornHandler {
                         println!("Error sending message: {}", why);
                     }
                 } 
-                let new_str = get_random_word(&self.dark_words);
-                words.dark_word = new_str;
+                let new_str = get_random_word(&guild_mx.dark_words);
+                guild_mx.dark_word = new_str;
             //}
         }
 
         
+    }
+}
+
+fn report_error<T: std::fmt::Display>(msg: &Message, ctx: &Context, e: T) {
+    if let Err(ee) = msg.channel_id.say(
+        &ctx.http,
+        format!("There was an error: Please report the following to sam@samstern.me\n {}", e)
+    ) {
+        println!("Error trying to report error {}: {}", e, ee);
     }
 }
 
